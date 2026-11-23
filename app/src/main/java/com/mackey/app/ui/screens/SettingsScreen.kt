@@ -37,6 +37,7 @@ fun SettingsScreen(
     val isDark by settingsViewModel.isDarkMode.collectAsState()
     val hapticEnabled by settingsViewModel.hapticEnabled.collectAsState()
     val keyScale by settingsViewModel.keySizeScale.collectAsState()
+    val rgbEnabled by settingsViewModel.rgbEnabled.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -52,6 +53,46 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
+        }
+
+        // RGB Chroma Lighting
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "RGB Keyboard Lighting",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Chroma Rainbow Glow", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text("Vibrant RGB reactive glow when pressing keys", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        Switch(
+                            checked = rgbEnabled,
+                            onCheckedChange = { settingsViewModel.setRgbEnabled(it) },
+                            colors = SwitchDefaults.colors(checkedThumbColor = MacBlueAccent)
+                        )
+                    }
+                }
+            }
         }
 
         // Appearance

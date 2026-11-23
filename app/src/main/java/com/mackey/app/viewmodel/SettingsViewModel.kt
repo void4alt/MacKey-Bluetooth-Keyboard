@@ -20,7 +20,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val hapticEnabled: StateFlow<Boolean> = _hapticEnabled.asStateFlow()
 
     private val _hapticStrength = MutableStateFlow(prefs.getInt("haptic_strength", 2))
-    val hapticStrength: StateFlow<Boolean> = _hapticEnabled.asStateFlow()
+    val hapticStrength: StateFlow<Int> = _hapticStrength.asStateFlow()
+
+    private val _rgbEnabled = MutableStateFlow(prefs.getBoolean("rgb_enabled", true))
+    val rgbEnabled: StateFlow<Boolean> = _rgbEnabled.asStateFlow()
 
     private val _keySizeScale = MutableStateFlow(prefs.getFloat("key_size_scale", 1.0f))
     val keySizeScale: StateFlow<Float> = _keySizeScale.asStateFlow()
@@ -41,6 +44,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setHapticStrength(strength: Int) {
         _hapticStrength.value = strength
         prefs.edit().putInt("haptic_strength", strength).apply()
+    }
+
+    fun setRgbEnabled(enabled: Boolean) {
+        _rgbEnabled.value = enabled
+        prefs.edit().putBoolean("rgb_enabled", enabled).apply()
     }
 
     fun setKeySizeScale(scale: Float) {

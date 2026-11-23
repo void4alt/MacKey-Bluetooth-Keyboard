@@ -15,6 +15,7 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,7 @@ class HidDeviceManager(private val context: Context) {
     private var hidDevice: BluetoothHidDevice? = null
     private var isAppRegistered = false
     private val executor = Executors.newSingleThreadExecutor()
+    private val hidDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -296,11 +298,13 @@ class HidDeviceManager(private val context: Context) {
 
     /**
      * Sends an 8-byte standard keyboard report to the connected Mac.
+     * Offloaded asynchronously to a dedicated single-threaded dispatcher to prevent
+     * UI thread blocking, eliminating touch lag and skipped frames.
      */
     @SuppressLint("MissingPermission")
-    fun sendKeyboardReport(modifier: Byte, keycodes: ByteArray): Boolean {
-        val host = currentHostDevice ?: return false
-        val hid = hidDevice ?: return false
+    fun sendKeyboardReport(modifier: Byte, keycodes: ByteArray) {
+        val host = currentHostDevice ?: return
+        val hid = hidDevice ?: return
 
         val payload = ByteArray(8)
         payload[0] = modifier
@@ -309,12 +313,13 @@ class HidDeviceManager(private val context: Context) {
             payload[2 + i] = keycodes[i]
         }
 
-        synchronized(reportLock) {
-            return try {
-                hid.sendReport(host, HidConstants.REPORT_ID_KEYBOARD.toInt(), payload)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error sending keyboard report", e)
-                false
+        scope.launch(hidDispatcher) {
+            synchronized(reportLock) {
+                try {
+                    hid.sendReport(host, HidConstants.REPORT_ID_KEYBOARD.toInt(), payload)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sending keyboard report", e)
+                }
             }
         }
     }
@@ -322,15 +327,15 @@ class HidDeviceManager(private val context: Context) {
     /**
      * Presses a key down with the specified modifier bitmask.
      */
-    fun sendKeyDown(modifier: Byte, keycode: Byte): Boolean {
-        return sendKeyboardReport(modifier, byteArrayOf(keycode))
+    fun sendKeyDown(modifier: Byte, keycode: Byte) {
+        sendKeyboardReport(modifier, byteArrayOf(keycode))
     }
 
     /**
      * Releases pressed keys. Can optionally preserve active modifier.
      */
-    fun sendKeyUp(modifier: Byte = 0x00): Boolean {
-        return sendKeyboardReport(modifier, ByteArray(0))
+    fun sendKeyUp(modifier: Byte = 0x00) {
+        sendKeyboardReport(modifier, ByteArray(0))
     }
 
     /**
