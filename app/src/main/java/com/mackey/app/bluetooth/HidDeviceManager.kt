@@ -50,6 +50,8 @@ class HidDeviceManager(private val context: Context) {
     val capsLockActive: StateFlow<Boolean> = _capsLockActive.asStateFlow()
 
     private var currentHostDevice: BluetoothDevice? = null
+    private var lastHostDevice: BluetoothDevice? = null
+    private var isExplicitDisconnect = false
 
     // Lock to prevent concurrent sendReport collisions over the Bluetooth interrupt pipe
     private val reportLock = Any()
@@ -93,6 +95,8 @@ class HidDeviceManager(private val context: Context) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     currentHostDevice = device
                     if (device != null) {
+                        lastHostDevice = device
+                        isExplicitDisconnect = false
                         _connectionState.value = ConnectionState.Connected(device)
                     }
                 }
@@ -105,6 +109,18 @@ class HidDeviceManager(private val context: Context) {
                     }
                     _connectionState.value = ConnectionState.Disconnected
                     releaseAllKeys()
+
+                    // Auto-reconnect if connection was dropped unexpectedly and Bluetooth is on
+                    if (!isExplicitDisconnect && bluetoothAdapter?.isEnabled == true && lastHostDevice != null) {
+                        val hostToReconnect = lastHostDevice
+                        scope.launch {
+                            delay(2000L)
+                            if (currentHostDevice == null && hostToReconnect != null && !isExplicitDisconnect) {
+                                Log.d(TAG, "Attempting auto-reconnect to ${hostToReconnect.name}")
+                                connect(hostToReconnect)
+                            }
+                        }
+                    }
                 }
                 BluetoothProfile.STATE_DISCONNECTING -> {
                     _connectionState.value = ConnectionState.Disconnecting
@@ -254,6 +270,7 @@ class HidDeviceManager(private val context: Context) {
      */
     @SuppressLint("MissingPermission")
     fun disconnect() {
+        isExplicitDisconnect = true
         val hid = hidDevice
         val host = currentHostDevice
         if (hid != null && host != null) {
@@ -317,14 +334,35 @@ class HidDeviceManager(private val context: Context) {
     }
 
     /**
-     * Sends an atomic keystroke: Key-Down followed by Key-Up after a precise delay.
-     * Guaranteed to prevent stuck keys and ensure macOS keyboard buffer registers the event.
+     * Sends an authentic Mac keystroke sequence:
+     * For modifier combos (e.g. ⌘C, ⌘Space):
+     * 1. Assert modifier down (Command)
+     * 2. Press key while modifier is held (Command + C)
+     * 3. Release key while modifier is still held
+     * 4. Release modifier
+     *
+     * This exact 4-step sequence ensures macOS window server, event tap,
+     * and global shortcuts (Spotlight, App Switcher, Copy/Paste) register 100% reliably.
      */
-    fun sendKeyStroke(modifier: Byte, keycode: Byte, holdMs: Long = 25L, onComplete: (() -> Unit)? = null) {
+    fun sendKeyStroke(modifier: Byte, keycode: Byte, holdMs: Long = 35L, onComplete: (() -> Unit)? = null) {
         scope.launch {
-            sendKeyDown(modifier, keycode)
-            delay(holdMs)
-            sendKeyUp(modifier = 0x00)
+            if (modifier != HidConstants.MODIFIER_NONE) {
+                // Step 1: Modifier Down
+                sendKeyboardReport(modifier, ByteArray(0))
+                delay(15L)
+                // Step 2: Key Down with Modifier
+                sendKeyboardReport(modifier, byteArrayOf(keycode))
+                delay(holdMs)
+                // Step 3: Key Up with Modifier held
+                sendKeyboardReport(modifier, ByteArray(0))
+                delay(15L)
+                // Step 4: Modifier Up
+                sendKeyboardReport(HidConstants.MODIFIER_NONE, ByteArray(0))
+            } else {
+                sendKeyboardReport(HidConstants.MODIFIER_NONE, byteArrayOf(keycode))
+                delay(holdMs)
+                sendKeyboardReport(HidConstants.MODIFIER_NONE, ByteArray(0))
+            }
             onComplete?.invoke()
         }
     }

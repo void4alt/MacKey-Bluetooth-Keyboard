@@ -23,7 +23,10 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
 
     val hidManager = HidDeviceManager(application.applicationContext)
     val connectionState: StateFlow<ConnectionState> = hidManager.connectionState
-    val capsLockFromHost: StateFlow<Boolean> = hidManager.capsLockActive
+
+    // Caps Lock state (combines host LED feedback + local toggle)
+    private val _capsLockState = MutableStateFlow(false)
+    val capsLockActive: StateFlow<Boolean> = _capsLockState.asStateFlow()
 
     // Modifier states
     // Latched: active for the next normal key press, then clears automatically
@@ -51,6 +54,19 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
 
     init {
         hidManager.initialize()
+        // Sync CapsLock with host LED reports from macOS
+        viewModelScope.launch {
+            hidManager.capsLockActive.collect { hostCaps ->
+                _capsLockState.value = hostCaps
+            }
+        }
+    }
+
+    fun toggleCapsLock() {
+        val newState = !_capsLockState.value
+        _capsLockState.value = newState
+        triggerHaptic(2)
+        hidManager.sendKeyStroke(HidConstants.MODIFIER_NONE, HidConstants.KEY_CAPSLOCK, holdMs = 40L)
     }
 
     fun triggerHaptic(strength: Int = 1) {
@@ -90,16 +106,25 @@ class KeyboardViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Handles key release up. Clears latched (single-press) modifiers.
+     * Handles key release up. Clears latched (single-press) modifiers cleanly after key release.
      */
     fun onKeyUp(key: KeyItem) {
         if (key.type == KeyType.MODIFIER) return
 
-        val effectiveModifier = _lockedModifiers.value // keep locked modifiers
-        hidManager.sendKeyUp(effectiveModifier)
+        val hadLatched = _latchedModifiers.value != HidConstants.MODIFIER_NONE
+        val currentMod = (_latchedModifiers.value.toInt() or _lockedModifiers.value.toInt()).toByte()
 
-        // Clear latched modifier after key stroke completes
-        _latchedModifiers.value = HidConstants.MODIFIER_NONE
+        // Release the key first while keeping the modifier asserted
+        hidManager.sendKeyUp(currentMod)
+
+        if (hadLatched) {
+            viewModelScope.launch {
+                delay(20L)
+                _latchedModifiers.value = HidConstants.MODIFIER_NONE
+                val lockedOnly = _lockedModifiers.value
+                hidManager.sendKeyUp(lockedOnly)
+            }
+        }
     }
 
     /**

@@ -3,7 +3,9 @@ package com.mackey.app.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,15 +71,14 @@ fun KeyButton(
             .border(0.5.dp, borderColor, RoundedCornerShape(7.dp))
             .background(if (isPressed) pressedColor else baseKeyColor)
             .pointerInput(key) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        onDown(key)
-                        tryAwaitRelease()
-                        isPressed = false
-                        onUp(key)
-                    }
-                )
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    isPressed = true
+                    onDown(key)
+                    waitForUpOrCancellation()
+                    isPressed = false
+                    onUp(key)
+                }
             },
         contentAlignment = Alignment.Center
     ) {

@@ -46,7 +46,7 @@ fun KeyboardScreen(
     val connectionState by keyboardViewModel.connectionState.collectAsState()
     val latchedMods by keyboardViewModel.latchedModifiers.collectAsState()
     val lockedMods by keyboardViewModel.lockedModifiers.collectAsState()
-    val capsFromHost by keyboardViewModel.capsLockFromHost.collectAsState()
+    val isCapsActive by keyboardViewModel.capsLockActive.collectAsState()
     val fnActive by keyboardViewModel.fnActive.collectAsState()
 
     val isDark by settingsViewModel.isDarkMode.collectAsState()
@@ -86,10 +86,10 @@ fun KeyboardScreen(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(if (capsFromHost) MacGreen else Color.Gray)
+                            .background(if (isCapsActive) MacGreen else Color.Gray)
                     )
                     Text(
-                        text = if (capsFromHost) "CAPS ON" else "Caps Off",
+                        text = if (isCapsActive) "CAPS ON" else "Caps Off",
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -135,9 +135,10 @@ fun KeyboardScreen(
                 }
             }
 
-            // Row 1: Number Row (`~` to Delete)
+            // Row 1: Number Row (`Esc`, `~` to Delete)
             Row(modifier = Modifier.fillMaxWidth()) {
-                KeyButton(KeyItem("`", "~", HidConstants.KEY_GRAVE, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
+                KeyButton(KeyItem("esc", null, HidConstants.KEY_ESCAPE, weight = 1.1f, type = KeyType.SPECIAL), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1.1f), baseKeyHeight, isDark)
+                KeyButton(KeyItem("`", "~", HidConstants.KEY_GRAVE, weight = 0.9f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(0.9f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("1", "!", HidConstants.KEY_1, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("2", "@", HidConstants.KEY_2, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("3", "#", HidConstants.KEY_3, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
@@ -150,7 +151,7 @@ fun KeyboardScreen(
                 KeyButton(KeyItem("0", ")", HidConstants.KEY_0, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("-", "_", HidConstants.KEY_MINUS, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("=", "+", HidConstants.KEY_EQUAL, weight = 1f), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
-                KeyButton(KeyItem("⌫", null, HidConstants.KEY_BACKSPACE, weight = 1.4f, type = KeyType.ACTION), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1.4f), baseKeyHeight, isDark)
+                KeyButton(KeyItem("⌫", null, HidConstants.KEY_BACKSPACE, weight = 1.3f, type = KeyType.ACTION), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1.3f), baseKeyHeight, isDark)
             }
 
             // Row 2: QWERTY Row
@@ -173,7 +174,20 @@ fun KeyboardScreen(
 
             // Row 3: Home Row
             Row(modifier = Modifier.fillMaxWidth()) {
-                KeyButton(KeyItem("Esc", null, HidConstants.KEY_ESCAPE, weight = 1.3f, type = KeyType.SPECIAL), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1.3f), baseKeyHeight, isDark)
+                KeyButton(
+                    key = KeyItem(
+                        label = if (isCapsActive) "CAPS" else "caps",
+                        subLabel = if (isCapsActive) "●" else null,
+                        keycode = HidConstants.KEY_CAPSLOCK,
+                        weight = 1.3f,
+                        type = KeyType.SPECIAL
+                    ),
+                    onDown = { keyboardViewModel.toggleCapsLock() },
+                    onUp = {},
+                    modifier = Modifier.weight(1.3f),
+                    height = baseKeyHeight,
+                    isDark = isDark
+                )
                 KeyButton(KeyItem("A", null, HidConstants.KEY_A), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("S", null, HidConstants.KEY_S), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)
                 KeyButton(KeyItem("D", null, HidConstants.KEY_D), { keyboardViewModel.onKeyDown(it) }, { keyboardViewModel.onKeyUp(it) }, Modifier.weight(1f), baseKeyHeight, isDark)

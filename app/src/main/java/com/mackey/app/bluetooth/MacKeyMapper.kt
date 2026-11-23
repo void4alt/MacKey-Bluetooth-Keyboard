@@ -106,11 +106,11 @@ object MacKeyMapper {
             if (stroke != null) {
                 // Key Down
                 hidManager.sendKeyDown(stroke.modifier, stroke.keycode)
-                delay(18L) // macOS debounce registration window
+                delay(6L) // Fast down
 
                 // Key Up
                 hidManager.sendKeyUp(0x00)
-                delay(18L) // Interval between consecutive keystrokes
+                delay(6L) // Fast release interval
             }
 
             onProgress(i + 1, total)
