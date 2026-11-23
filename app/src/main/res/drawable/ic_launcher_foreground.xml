@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Keyboard outline icon with Command symbol -->
+    <path
+        android:fillColor="#0A84FF"
+        android:pathData="M24,30h60c4.4,0 8,3.6 8,8v32c0,4.4 -3.6,8 -8,8H24c-4.4,0 -8,-3.6 -8,-8V38C16,33.6 19.6,30 24,30zM32,40h6v6h-6zM44,40h6v6h-6zM56,40h6v6h-6zM68,40h6v6h-6zM32,50h6v6h-6zM44,50h6v6h-6zM56,50h6v6h-6zM68,50h6v6h-6zM38,62h30v6h-30z" />
+</vector>
+

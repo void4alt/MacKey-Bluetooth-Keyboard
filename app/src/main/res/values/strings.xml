@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">MacKey</string>
+    <string name="bluetooth_not_supported">Bluetooth is not supported on this device</string>
+    <string name="hid_profile_not_supported">Bluetooth HID Device profile is not supported by your phone\'s manufacturer or hardware</string>
+    <string name="mac_keyboard_description">Wireless Bluetooth Keyboard for macOS</string>
+</resources>
+
