@@ -175,7 +175,7 @@ class HidDeviceManager(private val context: Context) {
             DEVICE_NAME,
             DEVICE_DESCRIPTION,
             DEVICE_PROVIDER,
-            BluetoothHidDeviceAppSdpSettings.SUBCLASS1_KEYBOARD,
+            BluetoothHidDevice.SUBCLASS1_KEYBOARD,
             HidConstants.HID_REPORT_DESCRIPTOR
         )
 
